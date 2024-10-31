@@ -51,12 +51,16 @@ addons_path = addons
 xmlrpc_port = 8069
 limit_memory_hard = 0
 proxy_mode = True
+without_demo = True
 
 ; Uncomment the following lines if you want to enable logging
 logfile = ../odoo_erp_logs.log
 
 ##START PROGRAM
 ./odoo-bin -c config.conf
+
+##START PROGRAM FOR FIRST 
+./odoo-bin -c config.conf -i base
 
 ##ISSUE FIXING
 
