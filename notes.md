@@ -1,16 +1,10 @@
 ##VirtualHost as default domain via apache in whm | Example Conf
 <VirtualHost example.com:443>
   ServerName example.com
-  ProxyRequests On
-  ProxyPreserveHost On
-  SSLProxyEngine on
-  RequestHeader set X-Forwarded-Proto "https" early
+
   SSLEngine on
   SSLCertificateFile /home/usercpanel/ssl/certs/sslcertificate_name.crt
   SSLCertificateKeyFile /home/usercpanel/ssl/keys/sslcertificatekey_name.key
-
-  ProxyPass / https://example.com:8443/
-  ProxyPassReverse / https://example.com:8443/
 
   # Additional headers
   Header add X-Forwarded-Host %{HTTP_HOST}s
@@ -22,13 +16,12 @@
   Header set Access-Control-Allow-Methods "GET, POST, OPTIONS"
   Header set Access-Control-Allow-Headers "Origin, X-Requested-With, Content-Type, Accept, Authorization"
   Header set Access-Control-Allow-Credentials "true"
-
   # Allow CORS preflight requests
   Header always set Access-Control-Allow-Origin "*"
   Header always set Access-Control-Allow-Methods "GET, POST, OPTIONS"
   Header always set Access-Control-Allow-Headers "Origin, X-Requested-With, Content-Type, Accept, Authorization"
   Header always set Access-Control-Allow-Credentials "true"
-
+  RequestHeader set X-Forwarded-Proto "https" early
   # Handle preflight OPTIONS requests (CORS preflight)
   SetEnvIf Request_Method OPTIONS IS_OPTIONS
   Header always set Access-Control-Allow-Origin "*"
@@ -44,7 +37,21 @@
   </Directory>
 
   ErrorLog /home/usercpanel/public_html/example.com/errors_https.log
+
+  # Additional headers
+  Header add X-Forwarded-Host %{HTTP_HOST}s
+  Header add X-Forwarded-For %{REMOTE_ADDR}s
+  Header add X-Forwarded-Proto https
+  Header add X-Real-IP %{REMOTE_ADDR}s
+  
+  # Redirect / to port 8443
+  Redirect permanent / https://example.com:8443/
 </VirtualHost>
+
+## Jangan Lupa Domain di Setting > Website > nama example.com:8443 dan untuk live chat di header di website > pojok kanan atas klik edit > Theme Tab > Code Injection Masukan HTML Dibawah dan sesuaikan
+<script type="text/javascript" src="https://example.com:8443/im_livechat/loader/[tergantung id channel]"></script>
+<script type="text/javascript" src="https://example.com:8443/im_livechat/assets_embed.js"></script>
+## Dan di Setting > Technical > System Parameters pastikan variabel web.base.url adalah https://example.com:8443
 
 ##Nginx Conf as point for default domain via nginx installed as standalone with port 8443 for ssl and 8080 for non ssl | Example Conf
 # CUSTOM ODOO NGINX CONFIG
