@@ -1,59 +1,5 @@
-##VirtualHost as default domain via apache in whm | Example Conf
-<VirtualHost example.com:443>
-  ServerName example.com
-
-  SSLEngine on
-  SSLCertificateFile /home/usercpanel/ssl/certs/sslcertificate_name.crt
-  SSLCertificateKeyFile /home/usercpanel/ssl/keys/sslcertificatekey_name.key
-
-  # Additional headers
-  Header add X-Forwarded-Host %{HTTP_HOST}s
-  Header add X-Forwarded-For %{REMOTE_ADDR}s
-  Header add X-Forwarded-Proto https
-  Header add X-Real-IP %{REMOTE_ADDR}s
-  # Set CORS headers for the response from the proxy
-  Header set Access-Control-Allow-Origin "*"
-  Header set Access-Control-Allow-Methods "GET, POST, OPTIONS"
-  Header set Access-Control-Allow-Headers "Origin, X-Requested-With, Content-Type, Accept, Authorization"
-  Header set Access-Control-Allow-Credentials "true"
-  # Allow CORS preflight requests
-  Header always set Access-Control-Allow-Origin "*"
-  Header always set Access-Control-Allow-Methods "GET, POST, OPTIONS"
-  Header always set Access-Control-Allow-Headers "Origin, X-Requested-With, Content-Type, Accept, Authorization"
-  Header always set Access-Control-Allow-Credentials "true"
-  RequestHeader set X-Forwarded-Proto "https" early
-  # Handle preflight OPTIONS requests (CORS preflight)
-  SetEnvIf Request_Method OPTIONS IS_OPTIONS
-  Header always set Access-Control-Allow-Origin "*"
-  Header always set Access-Control-Allow-Methods "GET, POST, OPTIONS"
-  Header always set Access-Control-Allow-Headers "Origin, X-Requested-With, Content-Type, Accept, Authorization"
-  Header always set Access-Control-Allow-Credentials "true"
-
-  <Directory /home/usercpanel/public_html/example.com>
-     Order Allow,Deny
-     Allow from all
-     AllowOverride all
-     Header set Access-Control-Allow-Origin "*"
-  </Directory>
-
-  ErrorLog /home/usercpanel/public_html/example.com/errors_https.log
-
-  # Additional headers
-  Header add X-Forwarded-Host %{HTTP_HOST}s
-  Header add X-Forwarded-For %{REMOTE_ADDR}s
-  Header add X-Forwarded-Proto https
-  Header add X-Real-IP %{REMOTE_ADDR}s
-  
-  # Redirect / to port 8443
-  Redirect permanent / https://example.com:8443/
-</VirtualHost>
-
-## Jangan Lupa Domain di Setting > Website > nama example.com:8443 dan untuk live chat di header di website > pojok kanan atas klik edit > Theme Tab > Code Injection Masukan HTML Dibawah dan sesuaikan
-<script type="text/javascript" src="https://example.com:8443/im_livechat/loader/[tergantung id channel]"></script>
-<script type="text/javascript" src="https://example.com:8443/im_livechat/assets_embed.js"></script>
-## Dan di Setting > Technical > System Parameters pastikan variabel web.base.url adalah https://example.com:8443
-
-##Nginx Conf as point for default domain via nginx installed as standalone with port 8443 for ssl and 8080 for non ssl | Example Conf
+### INTEGRATE NGINX AND APACHE2 for ODOO APPS WITH NGINX and Other Domain Apache2 Following WHM & CPANEL WITH SUPPORT LIVE CHAT
+## EXAMPLEODOOAPPS.COM Nginx Conf as point for default domain via nginx installed as standalone with port 443 for ssl and 80 for non ssl | Example Conf
 # CUSTOM ODOO NGINX CONFIG
 
 upstream odoo {
@@ -69,29 +15,29 @@ map $http_upgrade $connection_upgrade {
 
 # http -> https
 server {
-  listen 8080;
-  server_name example.com;
-  
-  rewrite ^(.*) https://$host$1 permanent;
+  listen 80;
+  server_name exampleodooapps.com;
+  rewrite ^(.*) https://exampleodooapps.com/$1 permanent;
 }
 
 server {
-  listen 8443 ssl;
-  server_name example.com;
+  listen 443 ssl;
+  server_name exampleodooapps.com;
 
   proxy_buffers 16 64k;
   proxy_buffer_size 128k;
   proxy_connect_timeout 600s;
   proxy_send_timeout 600s;
+  proxy_read_timeout 600s;
   proxy_next_upstream error timeout invalid_header http_500 http_502 http_503;
 
   # SSL parameters
-  ssl_certificate /home/usercpanel/ssl/certs/sslcertificate_name.crt;
-  ssl_certificate_key /home/usercpanel/ssl/keys/sslcertificatekey_name.key;
+  ssl_certificate /home/usercpanel/ssl/certs/sslcertfiles.crt;
+  ssl_certificate_key /home/usercpanel/ssl/keys/sslkeyfiles.key;
 
   # log
-  access_log /home/usercpanel/public_html/example.com/access_https.log;
-  error_log /home/usercpanel/public_html/example.com/errors_https.log;
+  access_log /home/usercpanel/public_html/exampleodooapps.com/access_https.log;
+  error_log /home/usercpanel/public_html/exampleodooapps.com/errors_https.log;
 
   # Redirect websocket requests to odoo gevent port
   location /websocket {
@@ -133,6 +79,66 @@ server {
   keepalive_timeout 300;
 }
 
+## otherdomainapachecpanel.com VirtualHost as default domain via apache in whm with port 8080 for Non SSL and 8443 for SSL | Example Conf
+
+server {
+    listen 80;
+    server_name otherdomainapachecpanel.com www.otherdomainapachecpanel.com;
+
+    # Redirect all HTTP traffic to HTTPS
+    rewrite ^(.*) https://otherdomainapachecpanel.com/$1 permanent;
+}
+
+server {
+    listen 443 ssl;
+    server_name otherdomainapachecpanel.com www.otherdomainapachecpanel.com;
+
+    # SSL configuration
+    ssl_certificate /home/usercpanel/ssl/certs/sslcertfiles.crt;
+    ssl_certificate_key /home/usercpanel/ssl/keys/sslkeyfiles.key;
+
+    # Proxy pass to Apache on port 8443 for SSL
+    location / {
+        proxy_pass https://otherdomainapachecpanel.com:8443;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+
+# Apache config for HTTP on port 8080
+<VirtualHost otherdomainapachecpanel.com:8080>
+  ServerName otherdomainapachecpanel.com
+  DocumentRoot /home/usercpanel/public_html/otherdomainapachecpanel.com
+
+  ErrorLog /home/usercpanel/public_html/otherdomainapachecpanel.com/errors_http.log
+</VirtualHost>
+
+# Apache config for HTTPS on port 8443
+<VirtualHost otherdomainapachecpanel.com:8443>
+  ServerName otherdomainapachecpanel.com
+  DocumentRoot /home/usercpanel/public_html/otherdomainapachecpanel.com
+
+  SSLEngine on
+  SSLCertificateFile /home/usercpanel/ssl/certs/sslcertfiles.crt
+  SSLCertificateKeyFile /home/usercpanel/ssl/keys/sslkeyfiles.key
+
+  ErrorLog /home/usercpanel/public_html/otherdomainapachecpanel.com/errors_https.log
+</VirtualHost>
+
+Browse to "WHM >> Tweak Settings" under the "Security" 
+Updating “Enable File Protect” from “On” to “Off”.
+
+Browse to "WHM >> Tweak Settings" under the "System" 
+Updating “Port to” from “8080 for non SSL && 8443 for SSL”.
+
+
+## Don't forget to set the domain in Settings > Website > name exampleodooapps.com, and for the live chat in the website header > top right corner, click Edit > Theme Tab > Code Injection. Insert the HTML below and adjust accordingly.
+<script type="text/javascript" src="https://exampleodooapps.com/im_livechat/loader/[following id channel]"></script>
+<script type="text/javascript" src="https://exampleodooapps.com/im_livechat/assets_embed.js"></script>
+## And in Setting > Technical > System Parameters make sure the variable web.base.url is https://exampleodooapps.com
+
 #Before Start for Mac
 brew install --cask wkhtmltopdf && pip3 install setuptools wheel && pip3 install -r requirements.txt
 #Before Start for AlmaLinux
@@ -171,10 +177,10 @@ websocket_rate_limit_delay = 0.2
 xmlrpc = True
 logfile = ../odoo_erp_logs.log
 
-##START PROGRAM
+##START PROGRAM for after install base
 ./odoo-bin -c config.conf
 
-##START PROGRAM FOR FIRST 
+##START PROGRAM FOR FIRST for Install Base
 ./odoo-bin -c config.conf -i base
 
 ##ISSUE FIXING
